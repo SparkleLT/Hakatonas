@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pažinimo pagalbininkas — labai paprasta versija</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --blue: #2563eb;
+      --blue-soft: #dbeafe;
+      --green: #16a34a;
+      --soft: #f9fafb;
+      --warning: #fef3c7;
+      --warning-line: #f59e0b;
+      --danger-soft: #fee2e2;
+      --danger-line: #dc2626;
+      --purple-soft: #ede9fe;
+      --purple-line: #7c3aed;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 540px;
+      min-height: calc(100vh - 24px);
+      background: var(--card);
+      border-radius: 26px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: var(--blue-soft);
+      padding: 18px 16px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 0.1px;
+    }
+
+    .screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .progress {
+      width: 100%;
+      color: var(--muted);
+      font-size: 15px;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    .bar {
+      width: 100%;
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--blue);
+      transition: width 0.2s ease;
+    }
+
+    .avatar {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: #fef3c7;
+      border: 6px solid #fde68a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 66px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .card {
+      width: 100%;
+      background: var(--soft);
+      border: 2px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .card.warning {
+      background: var(--warning);
+      border-color: var(--warning-line);
+    }
+
+    .card.danger {
+      background: var(--danger-soft);
+      border-color: var(--danger-line);
+    }
+
+    .card.private {
+      background: var(--purple-soft);
+      border-color: var(--purple-line);
+    }
+
+    .topic-title {
+      font-size: 21px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+
+    .text {
+      font-size: 25px;
+      line-height: 1.32;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .more-text {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 2px solid rgba(17, 24, 39, 0.08);
+      font-size: 22px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .tiny-hint {
+      color: var(--muted);
+      font-size: 14px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    .buttons {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 18px;
+      padding: 18px 14px;
+      min-height: 72px;
+      font-size: 23px;
+      font-weight: 900;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+    }
+
+    button:active { transform: scale(0.98); }
+    button:focus-visible { outline: 4px solid #f97316; outline-offset: 3px; }
+
+    .more-btn { background: var(--green); }
+    .next-btn { background: var(--blue); }
+
+    .speak-note {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 540px) {
+      body { padding: 8px; }
+      .app { min-height: calc(100vh - 16px); border-radius: 22px; }
+      .screen { padding: 14px; }
+      .avatar { width: 124px; height: 124px; font-size: 58px; }
+      .text { font-size: 22px; }
+      .more-text { font-size: 20px; }
+      button { font-size: 21px; min-height: 68px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Pažinimo pagalbininkas">
+    <div class="header">Pažinimo pagalbininkas</div>
+    <section class="screen">
+      <div class="progress" id="progressText"></div>
+      <div class="bar" aria-hidden="true"><div class="bar-fill" id="barFill"></div></div>
+      <div class="avatar" id="avatar" aria-hidden="true">👋</div>
+      <div class="card" id="card" onclick="repeatText()" role="article" aria-live="polite">
+        <div class="topic-title" id="topicTitle"></div>
+        <p class="text" id="mainText"></p>
+        <div class="more-text" id="moreText" hidden></div>
+      </div>
+      <div class="tiny-hint" id="hint"></div>
+      <div class="buttons" aria-label="Pagrindiniai veiksmai">
+        <button class="more-btn" id="moreBtn" onclick="showMore()">Noriu sužinoti daugiau</button>
+        <button class="next-btn" id="nextBtn" onclick="nextCard()">Toliau</button>
+      </div>
+      <div class="speak-note">Tekstą galima bakstelėti, kad garsas pakartotų, jei kortelė turi MP3 failą.</div>
+      <audio id="audioPlayer" preload="auto"></audio>
+    </section>
+  </main>
+
+  <script>
+    /*
+      MP3 GARSO FAILAI PIRMOMS 3 KORTELĖMS
+
+      Garsus dėk šalia šio HTML failo esančiame aplanke: audio/
+
+      01_pradzia_kortele.mp3:
+      "Pradžia. Čia mokysimės apie kūną, jausmus, santykius ir saugumą.
+       Pasirinkimai: Noriu sužinoti daugiau. Toliau."
+
+      01_pradzia_daugiau_1.mp3:
+      "Viskas bus trumpai ir paprastai."
+
+      01_pradzia_daugiau_2.mp3:
+      "Gali spausti „Toliau“. Gali spausti „Noriu sužinoti daugiau“."
+
+      02_mano_kunas_kortele.mp3:
+      "Mano kūnas. Mano kūnas priklauso man.
+       Pasirinkimai: Noriu sužinoti daugiau. Toliau."
+
+      02_mano_kunas_daugiau_1.mp3:
+      "Aš turiu teisę į pagarbą."
+
+      02_mano_kunas_daugiau_2.mp3:
+      "Kiti žmonės turi gerbti mano kūną."
+
+      03_kuno_dalys_kortele.mp3:
+      "Kūno dalys. Kūno dalys turi savo vardus.
+       Pasirinkimai: Noriu sužinoti daugiau. Toliau."
+
+      03_kuno_dalys_daugiau_1.mp3:
+      "Galva, rankos, kojos, krūtinė, pilvas, užpakalis ir privačios vietos yra kūno dalys."
+
+      03_kuno_dalys_daugiau_2.mp3:
+      "Aiškūs vardai padeda paprašyti pagalbos."
+    */
+
+    const topics = [
+      {
+        icon: '👋',
+        title: 'Pradžia',
+        tone: 'normal',
+        short: 'Čia mokysimės apie kūną, jausmus, santykius ir saugumą.',
+        audio: {
+          card: 'audio/01_pradzia_kortele.mp3',
+          more: [
+            'audio/01_pradzia_daugiau_1.mp3',
+            'audio/01_pradzia_daugiau_2.mp3'
+          ]
+        },
+        more: [
+          'Viskas bus trumpai ir paprastai.',
+          'Gali spausti „Toliau“. Gali spausti „Noriu sužinoti daugiau“.'
+        ]
+      },
+      {
+        icon: '🧍',
+        title: 'Mano kūnas',
+        tone: 'normal',
+        short: 'Mano kūnas priklauso man.',
+        audio: {
+          card: 'audio/02_mano_kunas_kortele.mp3',
+          more: [
+            'audio/02_mano_kunas_daugiau_1.mp3',
+            'audio/02_mano_kunas_daugiau_2.mp3'
+          ]
+        },
+        more: [
+          'Aš turiu teisę į pagarbą.',
+          'Kiti žmonės turi gerbti mano kūną.'
+        ]
+      },
+      {
+        icon: '🧍',
+        title: 'Kūno dalys',
+        tone: 'normal',
+        short: 'Kūno dalys turi savo vardus.',
+        audio: {
+          card: 'audio/03_kuno_dalys_kortele.mp3',
+          more: [
+            'audio/03_kuno_dalys_daugiau_1.mp3',
+            'audio/03_kuno_dalys_daugiau_2.mp3'
+          ]
+        },
+        more: [
+          'Galva, rankos, kojos, krūtinė, pilvas, užpakalis ir privačios vietos yra kūno dalys.',
+          'Aiškūs vardai padeda paprašyti pagalbos.'
+        ]
+      },
+      {
+        icon: '🔒',
+        title: 'Privačios kūno vietos',
+        tone: 'private',
+        short: 'Privačios vietos yra labai asmeniškos kūno vietos.',
+        more: [
+          'Tai gali būti krūtinė, vulva, makštis, varpa, sėklidės ir užpakalis.',
+          'Šias vietas paprastai dengia apatiniai drabužiai.'
+        ]
+      },
+      {
+        icon: '🚪',
+        title: 'Privati vieta',
+        tone: 'private',
+        short: 'Privačius dalykus darome privačioje vietoje.',
+        more: [
+          'Privati vieta gali būti vonia, tualetas arba tavo kambarys, kai durys uždarytos.',
+          'Vieša vieta yra gatvė, klasė, parduotuvė, autobusas ar bendras kambarys.'
+        ]
+      },
+      {
+        icon: '😊',
+        title: 'Jausmai',
+        tone: 'normal',
+        short: 'Aš galiu jausti: patinka, nepatinka arba nežinau.',
+        more: [
+          'Visi šie atsakymai yra normalūs.',
+          'Jei nežinau, galiu sustoti ir neskubėti.'
+        ]
+      },
+      {
+        icon: '✋',
+        title: 'Mano riba',
+        tone: 'warning',
+        short: 'Jei man nemalonu, galiu sakyti: „Ne“.',
+        more: [
+          'Galiu sakyti: „Stop“ arba „Man nemalonu“.',
+          'Galiu pasitraukti nuo žmogaus.'
+        ]
+      },
+      {
+        icon: '🟢',
+        title: 'Sutikimas',
+        tone: 'normal',
+        short: 'Sutikimas reiškia: aš aiškiai noriu.',
+        more: [
+          'Sutikimas turi būti laisvas. Niekas negali spausti.',
+          'Jei bijau, nežinau arba tyliu, tai nėra aiškus „taip“.'
+        ]
+      },
+      {
+        icon: '🔁',
+        title: 'Galiu persigalvoti',
+        tone: 'normal',
+        short: 'Aš galiu persigalvoti.',
+        more: [
+          'Iš pradžių galiu norėti, o vėliau nebenorėti.',
+          'Tada galiu sakyti: „Stop“.'
+        ]
+      },
+      {
+        icon: '👥',
+        title: 'Kito žmogaus riba',
+        tone: 'normal',
+        short: 'Kitas žmogus irgi gali sakyti: „Ne“.',
+        more: [
+          'Jei kitas žmogus nenori, aš sustoju.',
+          'Gali būti liūdna, bet spausti negalima.'
+        ]
+      },
+      {
+        icon: '🤝',
+        title: 'Artumas',
+        tone: 'normal',
+        short: 'Apkabinimas ar bučinys galimas tik tada, kai abu nori.',
+        more: [
+          'Galima paklausti: „Ar galiu tave apkabinti?“',
+          'Jei žmogus sako „ne“, reikia sustoti.'
+        ]
+      },
+      {
+        icon: '❤️',
+        title: 'Santykiai',
+        tone: 'normal',
+        short: 'Santykiai turi būti pagarbūs ir saugūs.',
+        more: [
+          'Geras santykis nėra grasinimai, spaudimas ar baimė.',
+          'Geras santykis leidžia pasakyti „ne“.'
+        ]
+      },
+      {
+        icon: '🌈',
+        title: 'Kas man patinka',
+        tone: 'normal',
+        short: 'Žmonėms gali patikti skirtingi žmonės.',
+        more: [
+          'Vieniems patinka moterys, kitiems vyrai, kai kuriems patinka ir vyrai, ir moterys.',
+          'Svarbiausia pagarba, saugumas ir sutikimas.'
+        ]
+      },
+      {
+        icon: '🔥',
+        title: 'Intymūs jausmai',
+        tone: 'private',
+        short: 'Kartais žmogus jaučia intymų norą.',
+        more: [
+          'Tai gali būti kūno jausmas arba noras būti arti kito žmogaus.',
+          'Net jei jaučiu norą, vis tiek reikia sutikimo ir saugumo.'
+        ]
+      },
+      {
+        icon: '🔐',
+        title: 'Seksas',
+        tone: 'private',
+        short: 'Seksas yra labai intymus suaugusių žmonių artumas.',
+        more: [
+          'Seksas galimas tik tada, kai abu suaugę žmonės aiškiai nori ir sutinka.',
+          'Jei vienas žmogus nenori, bijo, miega, yra apsvaigęs arba nežino, reikia sustoti.'
+        ]
+      },
+      {
+        icon: '🧠',
+        title: 'Kūno reakcijos',
+        tone: 'private',
+        short: 'Kūnas kartais reaguoja pats.',
+        more: [
+          'Varpa gali sustandėti. Privati vieta gali sudrėkti. Tai kūno reakcijos.',
+          'Kūno reakcija nereiškia, kad privalau kažką daryti.'
+        ]
+      },
+      {
+        icon: '💧',
+        title: 'Sperma',
+        tone: 'private',
+        short: 'Iš varpos gali ištekėti sperma.',
+        more: [
+          'Tai gali nutikti intymaus malonumo metu arba miegant.',
+          'Tai privatus kūno dalykas. Jei neramu, galima klausti gydytojo ar patikimo specialisto.'
+        ]
+      },
+      {
+        icon: '🩸',
+        title: 'Mėnesinės',
+        tone: 'private',
+        short: 'Kai kuriems žmonėms būna mėnesinės.',
+        more: [
+          'Mėnesinių metu iš makšties teka kraujas. Tai kūno dalis, ne gėda.',
+          'Gali reikėti įkloto, tampono, menstruacinės taurelės ar švarių apatinių.'
+        ]
+      },
+      {
+        icon: '🛁',
+        title: 'Higiena',
+        tone: 'normal',
+        short: 'Kūną ir privačias vietas reikia švariai prižiūrėti.',
+        more: [
+          'Prausiamės švelniai. Keičiame apatinius drabužius.',
+          'Jei skauda, niežti, keistai kvepia ar bėga skystis, reikia pasakyti gydytojui ar patikimam žmogui.'
+        ]
+      },
+      {
+        icon: '🤲',
+        title: 'Masturbacija',
+        tone: 'private',
+        short: 'Masturbacija yra kai žmogus pats liečia savo privačią vietą.',
+        more: [
+          'Tai yra privatus dalykas. Tai daroma vienam, privačioje vietoje.',
+          'To nedarome viešoje vietoje ir prie kitų žmonių.'
+        ]
+      },
+      {
+        icon: '👶',
+        title: 'Nėštumas',
+        tone: 'private',
+        short: 'Nėštumas gali prasidėti, kai sperma patenka į makštį.',
+        more: [
+          'Nėštumas reiškia, kad gimdoje auga kūdikis.',
+          'Jei žmogus nenori nėštumo, reikia kalbėti su gydytoju apie apsaugą.'
+        ]
+      },
+      {
+        icon: '🛡️',
+        title: 'Apsauga',
+        tone: 'normal',
+        short: 'Apsauga padeda saugotis nėštumo ir ligų.',
+        more: [
+          'Prezervatyvas yra viena apsaugos priemonė.',
+          'Apie kitas priemones geriausia klausti gydytojo, slaugytojo ar seksualinės sveikatos specialisto.'
+        ]
+      },
+      {
+        icon: '🦠',
+        title: 'Lytinės infekcijos',
+        tone: 'warning',
+        short: 'Kai kurios infekcijos gali plisti per seksą.',
+        more: [
+          'Jos gali skaudėti, niežėti arba kartais nesijausti visai.',
+          'Gydytojas gali atlikti tyrimus. Daug infekcijų galima gydyti.'
+        ]
+      },
+      {
+        icon: '🩺',
+        title: 'Gydytojas',
+        tone: 'normal',
+        short: 'Gydytojas gali padėti dėl kūno ir sveikatos.',
+        more: [
+          'Gydytojas turi paaiškinti, ką daro.',
+          'Jei apžiūra intymi, galima klausti, prašyti sustoti arba prašyti patikimo žmogaus šalia.'
+        ]
+      },
+      {
+        icon: '🧑‍⚕️',
+        title: 'Pagalba prausiantis',
+        tone: 'private',
+        short: 'Kartais darbuotojas padeda praustis ar rengtis.',
+        more: [
+          'Pagalba turi būti pagarbi. Žmogus turi paaiškinti, ką daro.',
+          'Jei man nemalonu, galiu sakyti: „Stop“ arba „Noriu kito žmogaus“.'
+        ]
+      },
+      {
+        icon: '📱',
+        title: 'Telefonas',
+        tone: 'warning',
+        short: 'Privati nuotrauka yra privati.',
+        more: [
+          'Nesiųsk privačių kūno nuotraukų žmogui, kuriuo nepasitiki.',
+          'Jei kas nors prašo slaptos nuotraukos, parodyk žinutę patikimam žmogui.'
+        ]
+      },
+      {
+        icon: '🎥',
+        title: 'Pornografija',
+        tone: 'warning',
+        short: 'Pornografija yra suaugusiųjų vaizdai apie seksą.',
+        more: [
+          'Tai nėra tikras mokymas apie santykius.',
+          'Ten žmonės gali vaidinti. Tikrame gyvenime reikia pagarbos, sutikimo ir saugumo.'
+        ]
+      },
+      {
+        icon: '🤫',
+        title: 'Paslaptys',
+        tone: 'danger',
+        short: 'Jei kas nors liepia slėpti nemalonų prisilietimą, tai nesaugu.',
+        more: [
+          'Gera paslaptis džiugina. Bloga paslaptis gąsdina arba skaudina.',
+          'Blogą paslaptį reikia pasakyti patikimam žmogui.'
+        ]
+      },
+      {
+        icon: '🆘',
+        title: 'Pavojus',
+        tone: 'danger',
+        short: 'Jei man dabar nesaugu, reikia ieškoti pagalbos.',
+        more: [
+          'Galiu eiti pas patikimą suaugusį žmogų, darbuotoją, mokytoją, gydytoją ar policiją.',
+          'Jei yra skubus pavojus, Lietuvoje galima skambinti 112.'
+        ]
+      },
+      {
+        icon: '🗣️',
+        title: 'Ką galiu pasakyti',
+        tone: 'normal',
+        short: 'Galiu sakyti trumpai: „Ne“, „Stop“, „Man nemalonu“.',
+        more: [
+          'Galiu sakyti: „Aš noriu išeiti“ arba „Prašau padėti“.',
+          'Galiu sakyti: „Noriu kalbėti su žmogumi, kuriuo pasitikiu“.'
+        ]
+      },
+      {
+        icon: '✅',
+        title: 'Pabaiga',
+        tone: 'normal',
+        short: 'Pirmas ratas baigtas. Tu sužinojai daug svarbių dalykų.',
+        more: [
+          'Galima kartoti dar kartą. Kartojimas padeda prisiminti.',
+          'Spausk „Toliau“ ir pradėsime nuo pradžios.'
+        ]
+      }
+    ];
+
+    let index = 0;
+    let moreIndex = -1;
+    let currentText = '';
+    let currentAudioSrc = '';
+
+    const progressText = document.getElementById('progressText');
+    const barFill = document.getElementById('barFill');
+    const avatar = document.getElementById('avatar');
+    const card = document.getElementById('card');
+    const topicTitle = document.getElementById('topicTitle');
+    const mainText = document.getElementById('mainText');
+    const moreText = document.getElementById('moreText');
+    const hint = document.getElementById('hint');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    function render() {
+      const topic = topics[index];
+      const progressNumber = Math.min(index + 1, topics.length);
+      const percent = ((progressNumber - 1) / (topics.length - 1)) * 100;
+
+      progressText.textContent = `Kortelė ${progressNumber} iš ${topics.length}`;
+      barFill.style.width = `${percent}%`;
+      avatar.textContent = topic.icon;
+      topicTitle.textContent = topic.title;
+      mainText.textContent = topic.short;
+      moreText.hidden = true;
+      moreText.textContent = '';
+      moreIndex = -1;
+
+      card.className = 'card';
+      if (topic.tone === 'warning') card.classList.add('warning');
+      if (topic.tone === 'danger') card.classList.add('danger');
+      if (topic.tone === 'private') card.classList.add('private');
+
+      hint.textContent = 'Spausk „Noriu sužinoti daugiau“ arba „Toliau“.';
+
+      // Kortelės garsas turi perskaityti temą, pagrindinį tekstą ir abu pasirinkimus.
+      currentText = `${topic.title}. ${topic.short}. Pasirinkimai: Noriu sužinoti daugiau. Toliau.`;
+      speak(currentText, getCardAudio(topic));
+    }
+
+    function showMore() {
+      const topic = topics[index];
+      if (!topic.more || topic.more.length === 0) {
+        moreText.hidden = false;
+        moreText.textContent = 'Daugiau apie šią temą nėra. Spausk „Toliau“.';
+        currentText = moreText.textContent;
+        speak(currentText);
+        return;
+      }
+
+      if (moreIndex < topic.more.length - 1) {
+        moreIndex += 1;
+      }
+
+      moreText.hidden = false;
+      moreText.textContent = topic.more[moreIndex];
+
+      if (moreIndex < topic.more.length - 1) {
+        hint.textContent = 'Gali spausti „Noriu sužinoti daugiau“ dar kartą.';
+      } else {
+        hint.textContent = 'Dabar gali spausti „Toliau“.';
+      }
+
+      // Paspaudus „Noriu sužinoti daugiau“, garsas skaito tik naują papildomą tekstą.
+      currentText = moreText.textContent;
+      speak(currentText, getMoreAudio(topic, moreIndex));
+    }
+
+    function nextCard() {
+      index += 1;
+      if (index >= topics.length) index = 0;
+      saveProgress();
+      render();
+    }
+
+    function repeatText() {
+      if (currentAudioSrc) {
+        playAudio(currentAudioSrc);
+      }
+    }
+
+    function getCardAudio(topic) {
+      return topic.audio && topic.audio.card ? topic.audio.card : '';
+    }
+
+    function getMoreAudio(topic, moreNumber) {
+      if (!topic.audio || !Array.isArray(topic.audio.more)) return '';
+      return topic.audio.more[moreNumber] || '';
+    }
+
+    function speak(text, audioSrc = '') {
+      currentText = text;
+      currentAudioSrc = audioSrc || '';
+
+      // TTS sąmoningai nenaudojamas: lietuvių kalbai naudojami iš anksto įrašyti MP3.
+      if (!currentAudioSrc) return;
+
+      playAudio(currentAudioSrc);
+    }
+
+    function playAudio(src) {
+      if (!src || !audioPlayer) return;
+
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+      audioPlayer.src = src;
+      audioPlayer.load();
+
+      const playPromise = audioPlayer.play();
+
+      // Naršyklė gali blokuoti automatinį garsą iki pirmo naudotojo paspaudimo.
+      // Tokiu atveju garsą galima paleisti bakstelėjus kortelę arba paspaudus mygtuką.
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    }
+
+    function saveProgress() {
+      try { localStorage.setItem('pazinimo_pagalbininkas_v3_index', String(index)); } catch (e) {}
+    }
+
+    function loadProgress() {
+      try {
+        const saved = Number(localStorage.getItem('pazinimo_pagalbininkas_v3_index'));
+        if (Number.isInteger(saved) && saved >= 0 && saved < topics.length) index = saved;
+      } catch (e) {}
+    }
+
+    loadProgress();
+    render();
+  </script>
+</body>
+</html>
